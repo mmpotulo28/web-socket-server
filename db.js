@@ -68,7 +68,6 @@ function subscribeToBids(onBidChange) {
 		})
 		.subscribe();
 
-	console.log("subscription", subscription);
 	return subscription;
 }
 

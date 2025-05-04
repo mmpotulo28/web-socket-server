@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node -r dotenv/config auction/server.js dotenv_config_path=.env.local"
+    "dev": "nodemon server.js",
+    "start": "node -r dotenv/config server.js dotenv_config_path=.env.local"
   },
   "keywords": [],
   "author": "",
