@@ -4,49 +4,61 @@ const { createClient } = require("@supabase/supabase-js");
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-console.log("credentials", supabaseKey, supabaseUrl);
+if (!supabaseUrl || !supabaseKey) {
+	console.error("Supabase credentials are missing. Please check your environment variables.");
+	process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Batch for storing bids before writing to the database
-let bidBatch = [];
-const BATCH_WRITE_INTERVAL = 5000; // 5 seconds
+// Store submitted bids in a Set
+const bidBatch = new Set();
 
-// Periodically write batched bids to the database
+// Store the bids in the database at regular intervals
+const BATCH_INTERVAL = 10000; // 5 seconds
+
 setInterval(async () => {
-	if (bidBatch.length > 0) {
-		try {
-			const batch = [...bidBatch];
-			bidBatch = []; // Clear the batch
-			const { error } = await supabase.from("bids").insert(batch);
-			if (error) {
-				console.error("Error writing batched bids:", error);
-			} else {
-				console.log(`Successfully wrote ${batch.length} bids to the database.`);
-			}
-		} catch (err) {
-			console.error("Unexpected error during batch write:", err);
+	if (bidBatch.size === 0) return;
+
+	try {
+		const bidsArray = Array.from(bidBatch);
+		const response = await supabase.from("bids").insert(bidsArray).select(); // Add .select() here
+
+		if (response.error) {
+			console.error("Error inserting bids:", response.error);
+		} else {
+			console.log("Bids inserted successfully:", response.data);
+			bidBatch.clear(); // Clear the batch after successful insertion
 		}
+	} catch (err) {
+		console.error("Unexpected error during bid insertion:", err);
 	}
-}, BATCH_WRITE_INTERVAL);
+}, BATCH_INTERVAL);
 
 async function insertBid(bid) {
-	// Validate bid object
-	if (!bid.itemId || !bid.amount || !bid.userId || !bid.timestamp) {
-		console.error("Invalid bid data:", bid);
-		throw new Error("Invalid bid data");
+	try {
+		bidBatch.add(bid);
+		console.log("New bid added to batch:", bid.itemId);
+		const highestBid = Array.from(bidBatch).reduce(
+			(maxBid, currentBid) => (currentBid.amount > maxBid.amount ? currentBid : maxBid),
+			{ amount: -Infinity },
+		);
+		return highestBid;
+	} catch (err) {
+		console.error("Error adding bid to batch:", err);
+		throw err;
 	}
-
-	// Add bid to the batch
-	bidBatch.push(bid);
 }
 
 async function fetchBidsByItemId(itemId) {
 	try {
 		const { data, error } = await supabase.from("bids").select("*").eq("itemId", itemId);
+
 		if (error) {
 			console.error("Error fetching bids:", error);
 			throw error;
 		}
+
 		return data;
 	} catch (err) {
 		console.error("Unexpected error in fetchBidsByItemId:", err);
@@ -54,21 +66,24 @@ async function fetchBidsByItemId(itemId) {
 	}
 }
 
-function subscribeToBids(onBidChange) {
-	const subscription = supabase
-		.channel("public:bids")
-		.on("postgres_changes", { event: "*", schema: "public", table: "bids" }, (payload) => {
-			console.log("Real-time bid change received:", {
-				schema: payload.schema,
-				table: payload.table,
-				bid: payload.new,
-				eventType: payload.eventType,
-			});
-			onBidChange(payload);
-		})
-		.subscribe();
+// get all bids
+async function fetchAllBids() {
+	try {
+		const { data, error } = await supabase
+			.from("bids")
+			.select("*")
+			.order("timestamp", { ascending: false });
 
-	return subscription;
+		if (error) {
+			console.error("Error fetching all bids:", error.message);
+			throw new Error("Failed to fetch all bids");
+		}
+
+		return data || []; // Ensure it always returns an array
+	} catch (err) {
+		console.error("Unexpected error in fetchAllBids:", err);
+		throw err;
+	}
 }
 
-module.exports = { insertBid, fetchBidsByItemId, subscribeToBids };
+module.exports = { insertBid, fetchBidsByItemId, fetchAllBids };

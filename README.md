@@ -15,7 +15,7 @@
 
 ## Docker Instructions
 
-### Build the Docker Image
+### Step 1: Build the Docker Image
 
 Run the following command in the project directory to build the Docker image:
 
@@ -23,7 +23,7 @@ Run the following command in the project directory to build the Docker image:
 docker build -t web-socket-server .
 ```
 
-### Tag the Docker Image
+### Step 2: Tag the Docker Image
 
 Tag the image with your Docker Hub username and repository name:
 
@@ -31,7 +31,7 @@ Tag the image with your Docker Hub username and repository name:
 docker tag web-socket-server mmpotulo28/web-socket-server:latest
 ```
 
-### Push the Docker Image to Docker Hub
+### Step 3: Push the Docker Image to Docker Hub
 
 Log in to Docker Hub:
 
@@ -45,9 +45,25 @@ Push the image to your Docker Hub repository:
 docker push mmpotulo28/web-socket-server:latest
 ```
 
-### Deploy and Run the Container
+### Step 4: Deploy the Image to Azure
 
-Run the following command to deploy and start the container:
+Run the following command to update the Azure Container App with the new image:
+
+```bash
+az containerapp update --name ws-server --resource-group onlyfriends-api --image mmpotulo28/web-socket-server:latest
+```
+
+### Step 5: Verify the Deployment
+
+Run the following command to verify the active revisions of the Azure Container App:
+
+```bash
+az containerapp show --name ws-server --resource-group onlyfriends-api --query properties.configuration.activeRevisions
+```
+
+### Deploy and Run the Container Locally
+
+Run the following command to deploy and start the container locally:
 
 ```bash
 docker run -d -p 4200:4200 --name web-socket-server-container mmpotulo28/web-socket-server:latest

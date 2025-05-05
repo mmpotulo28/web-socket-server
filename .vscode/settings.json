@@ -1,5 +1,16 @@
 {
  "cSpell.words": [
   "SUPABASE"
- ]
+ ],
+ "github.copilot.enable": {
+  "*": true,
+  "plaintext": true,
+  "markdown": true,
+  "scminput": false,
+  "java": true,
+  "css": true,
+  "javascript": true,
+  "sql": true,
+  "typescript": true
+ }
 }
